@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/Css/trangchu.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+<body>
+    <div id="menu_" >
+        <a href="http://localhost:3000/trang_chu" onclick="homeFunction()"><i class="fas fa-home"></i></a>
+        <a href="http://localhost:3000/lichsu" onclick="searchFunction()"><i class="fas fa-history history-icon"></i></a>
+        <a href="http://localhost:3000/data" onclick="settingsFunction()">  <i class="fas fa-database data-icon"></i></a>
+        <a href="http://localhost:3000/hoso" onclick="userFunction()"><i class="fas fa-user"></i></a>
+    </div>
+
+    <div class= "bieu_do_and_bat_tat" >
+        <div class="appliance" id="appliance1" style="margin-top : 160px; margin-left : 100px;">
+            <div class="device-control">
+                <span class="label-text">Light</span>
+                <label class="switch">
+                    <input type="checkbox" onclick="toggleIcon(this, 'device4', 'device4')">
+                    <span class="slider"></span>
+                </label>
+                <i id="device4" class="fas fa-lightbulb"></i>
+            </div>
+
+            <div class="parameter">
+                <i id="smog-icon" class="fas fa-smog dust-icon"></i>
+                <span>Device 4: <span id="smog-value">5</span>m/s</span>
+            </div>
+        </div>
+        <div class="bieu_do">
+            <div>
+                <canvas style=" width: 600px ; margin-top : 100px; margin-left : 50px" id="myLineChart1" width="900px" height="450px"></canvas>
+            </div>
+        </div>
+        <div class="appliance parameter_light" id = "appliance1" style="margin-top : 160px; margin-right : 100px">
+                <span style="padding-right:0px;" id = "solancanhbao">Số lần cảnh báo : 0</span>
+        </div>
+    </div>
+           <a href="http://localhost:3000/trang_chu/page"
+              style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-align: center; 
+                        text-decoration: none; font-size: 16px; border-radius: 5px; margin: 0 auto; display: flex; align-items: center; 
+                        justify-content: center; width: 150px; margin-top : 50px">
+                    <i class="fas fa-user" style="margin-right: 5px;"></i>Trang chủ cũ
+            </a>
+    <script>
+        const maxDataPoints = 60; // Số điểm dữ liệu hiển thị trên biểu đồ
+        let labels = Array(maxDataPoints).fill('');
+        let temperatureDataPoints = Array(maxDataPoints).fill(null);
+        let humidityDataPoints = Array(maxDataPoints).fill(null);
+        let lightDataPoints = Array(maxDataPoints).fill(null); // Dữ liệu cho đường giá trị ánh sáng  
+
+        let Other_data = Array(maxDataPoints).fill(null); // Dữ liệu cho đường giá trị ánh sáng  
+            // Cấu hình và vẽ biểu đồ
+            const data = {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'WindSpeed 13/11/2024',
+                        data: Other_data,
+                        fill: false,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }
+                ]
+            };
+            const config = {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: false,
+                    scales: {
+                        x: {
+                            ticks: {
+                                autoSkip: true, // Tự động bỏ qua các label không cần thiết
+                                maxTicksLimit: 24 // Giới hạn số lượng label hiển thị trên trục x
+                            }
+                        },
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            };
+
+            // Vẽ biểu đồ trong canvas với id là 'myLineChart1'
+            const myLineChart1 = new Chart(
+                document.getElementById('myLineChart1'),
+                config
+            );
+            
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sau khi biểu đồ được vẽ, thực hiện yêu cầu fetch để cập nhật dữ liệu
+            fetch("http://localhost:3000/trang_chu/data_chart", {
+                method: 'GET',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(function(response) {
+                response.json().then(function(element) {
+                    const date1 = new Date(element[0].datetime);
+                    const formattedDate1 = `${String(date1.getHours()).padStart(2, '0')}:${String(date1.getMinutes()).padStart(2, '0')}:${String(date1.getSeconds()).padStart(2, '0')}`;
+                    updateChartDOM(element[0].light, element[0].humidity, element[0].temperature, formattedDate1,element[0].device4);
+                    var dem = 0;
+                    for (var i = 1; i < element.length; i = i + 2) {
+                        
+                        if(element[i].light - element[i-1].light > 10 || element[i].temperature - element[i-1].temperature > 5 || element[i].humidity - element[i-1].humidity > 10) {
+                            const date = new Date(element[i-1].datetime);
+                            const formattedDate = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+                            updateChartDOM(element[i-1].light, element[i-1].humidity, element[i-1].temperature, formattedDate,element[i-1].device4);
+
+                            const date0 = new Date(element[i].datetime);
+                            const formattedDate0 = `${String(date0.getHours()).padStart(2, '0')}:${String(date0.getMinutes()).padStart(2, '0')}:${String(date0.getSeconds()).padStart(2, '0')}`;
+                            updateChartDOM(element[i].light, element[i].humidity, element[i].temperature, formattedDate0,element[i].device4);
+                            dem = 0;
+                        }else{
+                            dem = dem + 1;
+                        }
+                        if(dem == 6){
+                            const date0 = new Date(element[i].datetime);
+                            const formattedDate0 = `${String(date0.getHours()).padStart(2, '0')}:${String(date0.getMinutes()).padStart(2, '0')}:${String(date0.getSeconds()).padStart(2, '0')}`;
+                            updateChartDOM(element[i].light, element[i].humidity, element[i].temperature, formattedDate0,element[i].device4);
+                            dem = 0;
+                        } 
+                    }
+                })
+            })
+            .catch(error => {
+                console.error('Có lỗi xảy ra:', error); // Xử lý lỗi nếu có
+            });
+
+            // Hàm sinh số ngẫu nhiên từ 0 đến 1000
+            function getRandomValue() {
+                return Math.floor(Math.random() * 1001);
+            }
+
+            // Ví dụ sử dụng hàm
+            const randomValue = getRandomValue();
+            // Hàm để cập nhật dữ liệu liên tục mỗi 2 giây
+            function updateChartDOM(light, humidity, temperature, time , device4) {
+                labels.shift();
+                labels.push(time);
+                Other_data.shift();
+                Other_data.push(device4);
+                // Cập nhật biểu đồ
+                myLineChart1.update();
+            }
+        });
+        const smogValue_device4 = document.querySelector('.parameter_light');
+
+        // Kết nối WebSocket đến server
+        const ws1 = new WebSocket('ws://localhost:8080');
+        ws1.onopen = () => {
+            console.log('Kết nối WebSocket thành công ở trang chu');
+        };
+        ws1.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            //console.log('Nhận dữ liệu từ server:', data);
+            document.getElementById("smog-value").textContent = data.device4;
+            var smogIcon = document.getElementById("smog-icon");
+            
+            // Thay đổi màu sắc dựa trên giá trị nhiệt độ
+            if (data.device4 <= 30) {
+                smogIcon.style.color = "blue";
+            } else if (data.device4 > 30 && data.device4 <= 60) {
+                smogIcon.style.color = "orange";
+            } else {
+                smogIcon.style.color = "red";
+            }
+
+            if(data.device4 > 60){
+                smogValue_device4.classList.add('red-blink');
+            }
+            if(data.device4 <= 60){
+                smogValue_device4.classList.remove('red-blink');
+                document.getElementById("solancanhbao").textContent = "Số lần cảnh báo : " +  data.solannhayledcanhbao;
+                
+            }
+            checkBeroreUpdateWs(data);
+        };
+
+        ws1.onclose = () => {
+            console.log('WebSocket đã ngắt kết nối ở trang chu');
+        };
+        ws1.onerror = (error) => {
+            console.error('Lỗi WebSocket ở trang chu: ', error);
+        };
+
+        function checkBeroreUpdateWs(data){
+            updateChart(data.light,data.humidity,data.temperature,data.datetime,data.device4)
+            
+        }
+        // Hàm để cập nhật dữ liệu liên tục mỗi 2 giây
+        function updateChart(light,humidity,temperature,datetime,device4) {
+            // Lấy thời gian hiện tại
+            const date0 = new Date(datetime);
+            const formattedDate0 = `${String(date0.getHours()).padStart(2, '0')}:${String(date0.getMinutes()).padStart(2, '0')}:${String(date0.getSeconds()).padStart(2, '0')}`;
+            
+            labels.shift();
+            labels.push(formattedDate0);
+
+                Other_data.shift();
+                Other_data.push(device4);
+
+            // Cập nhật biểu đồ
+            myLineChart1.update();
+        }
+
+        function toggleIcon(checkbox, iconId, animationClass) {
+            var icon = document.getElementById(iconId);
+
+            fetch("http://localhost:3000/trang_chu/mqtt",{
+                method : 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({  action: checkbox.checked.toString(),
+                                        device: iconId
+                                    })
+            })
+            .then(function(response){
+                response.json().then(function(element) {
+                    console.log(element.device)
+                    console.log(element.status)
+                    if(element.status == "on" && element.device == "device4"){
+                        icon.style.color = "red";
+                    }
+                    if(element.status == "off" && element.device == "device4"){
+                        icon.style.color = "gray";
+                    }
+                })
+            })
+            .catch(error => {
+                console.error('Có lỗi xảy ra:', error); // Xử lý lỗi nếu có
+            });
+        }
+        
+    </script>
+    <style>
+        .red-blink {
+            animation: red-glow 0.2s ease-in-out infinite;
+        }
+
+        @keyframes red-glow {
+            0%, 100% {
+                background-color: transparent;
+                box-shadow: 0 0 5px 0 transparent;
+            }
+            50% {
+                background-color: rgba(255, 0, 0, 0.2); /* Background color blink */
+                box-shadow: 0 0 20px 10px rgba(255, 0, 0, 0.8);
+            }
+        }
+        /* Ensure the container takes up space for vertical centering */
+        .appliance {
+            height: 200px;
+            width: 240px;
+            display: flex;
+            flex-direction: column;  /* Stack items vertically */
+            align-items: center;     /* Center items horizontally */
+            justify-content: center; /* Center items vertically */
+        }
+
+        .parameter {
+            display: flex;
+            align-items: center; /* Aligns icon and text horizontally in .parameter */
+        }
+
+
+        .device-control {
+            display: flex;
+            align-items: center; /* Căn hàng theo chiều dọc */
+        }
+
+        .label-text {
+            padding-right: 10px;
+        }
+
+        .switch {
+           margin: 0 10px; /* Khoảng cách giữa switch và các phần tử bên cạnh */
+        }
+        #device4 {
+           padding-left: 10px;
+           color: gray;
+        }
+        .bieu_do_and_bat_tat {
+            align-items: center;    /* Center items horizontally */
+            justify-content: center; /* Center items vertically */
+        }
+
+    </style>
+</body>
+</html>

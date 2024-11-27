@@ -1,0 +1,76 @@
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Roboto;  
+    outline: none;
+    border: none;
+    text-decoration: none;
+    font-size: 20px;
+}
+
+#menu_{
+    display: flex;
+    justify-content: center;
+    background-color: #333;
+    padding: 10px 0;
+    
+}
+/* Style cho mỗi icon trong#menu */
+#menu_ a {
+    margin-left: 30px;
+    margin-right: 30px;
+    padding: 14px 20px;
+    color: white;
+    text-align: center;
+}
+/* Style khi di chuột qua icon */
+#menu_ a:hover {
+    background-color: #575757;
+    border-radius: 4px;
+}
+/* Icon font-awesome */
+#menu_ i {
+    font-size: 24px;
+}
+
+
+/* Style cho thanh thông số */
+#thong_so_ {
+    display: flex;
+    justify-content: space-around;
+    background-color: rgba(24, 32, 85, 0.422);
+    padding: 10px;
+    font-family: Arial, sans-serif;
+    color: white;
+}
+/* Style cho từng thông số */
+.parameter {
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+    padding: 10px;
+}
+/* Style cho icon */
+.parameter i {
+    margin-right: 8px;
+    font-size: 24px;
+}
+
+/* bảng */
+table {
+    width: 100%;
+    border-collapse: collapse; /* Gộp các viền của ô lại */
+    text-align: center; /* Căn giữa nội dung theo chiều ngang */
+}
+
+th, td {
+    border: 1px solid #ddd; /* Thêm viền cho các ô */
+    padding: 10px; /* Thêm khoảng cách bên trong các ô */
+    vertical-align: middle; /* Căn giữa theo chiều dọc */
+}
+
+/* Định dạng tiêu đề bảng */
+th {
+    background-color: #f4f4f4;
+}

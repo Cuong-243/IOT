@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/Css/lich_su.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+<body>
+    {{>header}}
+    <div>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Tìm kiếm thiết bị...">
+            <button type="button" class="search-button">
+                <i id= "search_button" class="fas fa-search"></i>
+            </button>
+        </div>
+
+        <table id="dataTable">
+            <colgroup>
+                <col style="width: 15%;">
+                <col style="width: 15%;">
+                <col style="width: 15%;">
+                <col style="width: 15%;">
+                <col style="width: 15%;">
+                <col style="width: 25%;">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th onclick="sortTable(1)">Nhiệt độ</th>
+                    <th onclick="sortTable(2)">Độ ẩm</th>
+                    <th onclick="sortTable(3)">Ánh sáng</th>
+                    <th onclick="sortTable(4)">Khói</th>
+                    <th onclick="sortTable(5)">Thời gian</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{!-- data here --}}
+            </tbody>
+        </table>
+    </div>
+    <div id="phan_trang">
+        <button id="prev_button">Trang trước</button>
+        <span id="current_page">Trang hiện tại : </span> 
+        <button id="next_button">Trang sau</button>
+    </div>
+    <script>
+        var current_page = 1;
+        function sortTable(n) {
+            const table = document.getElementById("dataTable");
+            let switching = true;
+            let dir = "asc"; 
+            let switchcount = 0;
+            let rows, i, x, y, shouldSwitch, xValue, yValue;
+            rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+            while (switching) {
+                switching = false;
+
+                for (i = 0; i < rows.length - 1; i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+
+                    // Kiểm tra nếu đang sắp xếp cột Thời gian
+                    if (n === 5) {
+                        xValue = new Date(x.innerHTML);
+                        yValue = new Date(y.innerHTML);
+                    } else {
+                        xValue = x.innerHTML.toLowerCase();
+                        yValue = y.innerHTML.toLowerCase();
+                    }
+
+                    // So sánh dựa trên chiều sắp xếp
+                    if (dir === "asc") {
+                        if (xValue > yValue) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (dir === "desc") {
+                        if (xValue < yValue) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++;
+                } else {
+                    // Đổi chiều sắp xếp nếu chưa có lần đổi nào xảy ra và chiều hiện tại là "asc"
+                    if (switchcount === 0 && dir === "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+            renumberTable()
+        }
+
+        function renumberTable() {
+            const table = document.getElementById("dataTable");
+            const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+            for (let i = 0; i < rows.length; i++) {
+                if(rows[i].style.display == ""){
+                    rows[i].cells[0].textContent = (current_page - 1)*10 + i+1; // Đặt lại giá trị số thứ tự
+                }
+            }
+        }
+        function addDataRow(element) {
+            const table = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
+            const newRow = table.insertRow();
+            var rows = table.rows;
+            const cell1 = newRow.insertCell(0);
+            const cell2 = newRow.insertCell(1);
+            const cell3 = newRow.insertCell(2);
+            const cell4 = newRow.insertCell(3);
+            const cell5 = newRow.insertCell(4);
+            const cell6 = newRow.insertCell(5);
+
+            cell1.innerText = rows.length - 1;
+            cell2.innerText = element.temperature;
+            cell3.innerText = element.humidity;
+            cell4.innerText = element.light;
+            cell5.innerText = element.light;
+            const date = new Date(element.datetime);
+            const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+            cell6.innerText = formattedDate;
+            renumberTable()
+        }
+        // Hàm để lấy dữ liệu từ server
+        function fetchData1(page) {
+            document.getElementById("current_page").innerText = "Trang hiện tại : " + page;
+            document.getElementById("dataTable").getElementsByTagName("tbody")[0].innerHTML = '';  // Xóa dữ liệu cũ
+            
+            fetch("http://localhost:3000/data/getdata",{
+                method : 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({  data1: page })
+            })
+            .then(function(response){
+                response.json().then(function(element) {
+                    for(var i =0;i < element.length; i++){
+                        addDataRow(element[i])
+                    }
+                    if (element.length < 10) {
+                        document.getElementById('next_button').disabled = true; // Vô hiệu hóa nút Trang trước
+                    } else {
+                        document.getElementById('next_button').disabled = false; // Kích hoạt lại nút Trang trước nếu trang lớn hơn 1
+                    }
+                })
+            })
+            .catch(error => {
+                console.error('Có lỗi xảy ra:', error); // Xử lý lỗi nếu có
+            });
+            if (page <= 1) {
+                document.getElementById('prev_button').disabled = true; // Vô hiệu hóa nút Trang trước
+            } else {
+                document.getElementById('prev_button').disabled = false; // Kích hoạt lại nút Trang trước nếu trang lớn hơn 1
+            }
+        }
+        // Lắng nghe sự kiện nhấn phím "Enter" trong ô nhập liệu
+        document.getElementById("searchInput").addEventListener('keydown', function(event) {
+            if (event.key === "Enter") {
+                document.getElementById("search_button").click();
+            }
+        });
+        document.getElementById("search_button").addEventListener('click', function() {
+            fetchData(current_page)
+            document.getElementById("noResultsRow").style.display = true ? 'none' : '';
+            renumberTable()
+        });
+        // Hàm để lấy dữ liệu từ server
+        function fetchData(page) {
+            document.getElementById("current_page").innerText = "Trang hiện tại : " + page;
+            document.getElementById("dataTable").getElementsByTagName("tbody")[0].innerHTML = '';  // Xóa dữ liệu cũ
+            
+            fetch("http://localhost:3000/data/getdata",{
+                method : 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({  data1 : page,
+                                        data2 : document.getElementById("searchInput").value})
+            })
+            .then(function(response){
+                response.json().then(function(element) {
+                    for(var i =0;i < element.length; i++){
+                        addDataRow(element[i])
+                    }
+                    if (element.length < 10) {
+                        document.getElementById('next_button').disabled = true; // Vô hiệu hóa nút Trang trước
+                    } else {
+                        document.getElementById('next_button').disabled = false; // Kích hoạt lại nút Trang trước nếu trang lớn hơn 1
+                    }
+                })
+            })
+            .catch(error => {
+                console.error('Có lỗi xảy ra:', error); // Xử lý lỗi nếu có
+            });
+            if (page <= 1) {
+                document.getElementById('prev_button').disabled = true; // Vô hiệu hóa nút Trang trước
+            } else {
+                document.getElementById('prev_button').disabled = false; // Kích hoạt lại nút Trang trước nếu trang lớn hơn 1
+            }
+        }
+        document.addEventListener('DOMContentLoaded', (event) => {
+            fetchData(current_page)
+        });
+        document.getElementById("prev_button").addEventListener("click",function(){
+            current_page = current_page - 1;
+            fetchData(current_page)
+        })
+        document.getElementById("next_button").addEventListener("click",function(){
+            current_page = current_page + 1;
+            fetchData(current_page)
+        })
+
+
+    </script>
+    <style>
+        /* CSS cho phần điều khiển phân trang */
+        #pagination-controls {
+            display: flex; /* Sử dụng flexbox để căn chỉnh theo chiều ngang */
+            justify-content: center; /* Căn giữa các nút */
+            align-items: center; /* Căn giữa theo chiều dọc */
+            margin-top: 20px; /* Khoảng cách phía trên */
+            margin-bottom: 20px; /* Khoảng cách phía dưới */
+        }
+
+        #pagination-controls button {
+            display: none;
+            background-color: #007bff; /* Màu nền */
+            color: white; /* Màu chữ */
+            border: none; /* Không viền */
+            border-radius: 5px; /* Bo góc */
+            padding: 10px 20px; /* Khoảng cách bên trong */
+            font-size: 16px; /* Kích thước chữ */
+            cursor: pointer; /* Con trỏ chuột kiểu tay khi di chuột */
+            margin: 0 10px; /* Khoảng cách giữa các nút */
+            transition: background-color 0.3s, transform 0.3s; /* Hiệu ứng chuyển màu và phóng to khi hover */
+        }
+
+        #pagination-controls button:hover {
+            background-color: #0056b3; /* Màu nền khi di chuột qua */
+            transform: scale(1.05); /* Phóng to nhẹ khi di chuột qua */
+        }
+
+        #pagination-controls span {
+            font-size: 16px; /* Kích thước chữ */
+            margin: 0 20px; /* Khoảng cách giữa nút và thông tin trang hiện tại */
+        }
+        /* Căn giữa search container */
+        .search-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0; /* Khoảng cách trên dưới của thanh tìm kiếm */
+        }
+
+        /* Styling cho ô input */
+        #searchInput {
+            width: 400px; /* Chiều rộng của ô tìm kiếm */
+            padding: 10px 20px; /* Padding bên trong ô tìm kiếm */
+            border: 2px solid #ccc; /* Viền của ô tìm kiếm */
+            border-radius: 20px 0 0 20px; /* Bo góc trái của ô tìm kiếm */
+            outline: none;
+            font-size: 16px; /* Kích thước chữ */
+        }
+
+        /* Styling cho nút search */
+        .search-button {
+            background-color: #f8f8f8; /* Màu nền của nút */
+            border: 2px solid #ccc; /* Viền của nút */
+            border-left: none; /* Loại bỏ viền trái để ghép với ô tìm kiếm */
+            border-radius: 0 20px 20px 0; /* Bo góc phải của nút */
+            padding: 8px 20px; /* Padding bên trong nút */
+            cursor: pointer;
+        }
+
+        .search-button i {
+            font-size: 18px; /* Kích thước icon tìm kiếm */
+            color: #333; /* Màu của icon */
+        }
+
+        /* Tạo hiệu ứng hover cho nút search */
+        .search-button:hover {
+            background-color: #1171de; /* Thay đổi màu nền khi hover */
+        }
+    </style>
+</body>
+</html>

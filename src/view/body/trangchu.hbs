@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/Css/trangchu.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+<body>
+   {{>header}}
+
+    <div class= "bieu_do_and_bat_tat" >
+        <div class="bieu_do">
+            <div>
+                <canvas id="myLineChart1" width="900px" height="450px"></canvas>
+            </div>
+        </div>
+
+        <div class="bat_tat">
+            <div id = "anomation_light"></div>
+            <div>
+                <img class = "nenanh" id = "ngoinha" src="/pic/ngoinha1.jpg" >
+                <img class = "nenanh may" id = "may1" src="/pic/may.jpg" >
+                <img class = "nenanh may" id = "may2" src="/pic/may.jpg" >
+                <img class = "nenanh may" id = "may3" src="/pic/may.jpg" >
+                <img class = "nenanh" id = "mattroi" src="/pic/mattroi.gif" alt="">
+                <img class = "nenanh" id = "nguoituyet" src="/pic/nguoituyet.jpg" >
+                <img class = "nenanh" id = "tuyet1" src="/pic/tuyet1.jpg" >
+                <img class = "nenanh" id = "tuyet2" src="/pic/tuyet1.jpg" >
+                <img class = "nenanh" id = "tuyet3" src="/pic/tuyet1.jpg" >
+            </div>
+
+            <div class="appliance" id = "appliance1">
+                <span style="padding-right: 10px;">Light</span>
+                <label class="switch">
+                    <input type="checkbox" onclick="toggleIcon(this, 'light', 'device4')">
+                    <span class="slider"></span>
+                </label>
+                <i id="light" class="fas fa-lightbulb" style="padding-left: 10px; color: gray;"></i>
+
+                <span style="padding-right:0px;" id = "solancanhbao">Số lần cảnh báo : 0</span>
+                <i id="light" class="fas fa-lightbulb" style="padding-left: 10px; color: gray;"></i>
+            </div>
+        </div>
+    </div>
+           <a href="http://localhost:3000/trang_chu/page"
+              style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-align: center; 
+                        text-decoration: none; font-size: 16px; border-radius: 5px; margin: 0 auto; display: flex; align-items: center; 
+                        justify-content: center; width: 100px;">
+                    <i class="fas fa-user" style="margin-right: 5px;"></i>Bài 5
+            </a>
+    <script>
+        const maxDataPoints = 60; // Số điểm dữ liệu hiển thị trên biểu đồ
+        let labels = Array(maxDataPoints).fill('');
+        let temperatureDataPoints = Array(maxDataPoints).fill(null);
+        let humidityDataPoints = Array(maxDataPoints).fill(null);
+        let lightDataPoints = Array(maxDataPoints).fill(null); // Dữ liệu cho đường giá trị ánh sáng  
+
+        let Other_data = Array(maxDataPoints).fill(null); // Dữ liệu cho đường giá trị ánh sáng  
+            // Cấu hình và vẽ biểu đồ
+            const data = {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Temperature 6h 28/08/2024',
+                        data: Other_data,
+                        fill: false,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }
+                ]
+            };
+
+            const config = {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: false,
+                    scales: {
+                        x: {
+                            ticks: {
+                                autoSkip: true, // Tự động bỏ qua các label không cần thiết
+                                maxTicksLimit: 24 // Giới hạn số lượng label hiển thị trên trục x
+                            }
+                        },
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            };
+
+            // Vẽ biểu đồ trong canvas với id là 'myLineChart1'
+            const myLineChart1 = new Chart(
+                document.getElementById('myLineChart1'),
+                config
+            );
+            
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sau khi biểu đồ được vẽ, thực hiện yêu cầu fetch để cập nhật dữ liệu
+            fetch("http://localhost:3000/trang_chu/data_chart", {
+                method: 'GET',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(function(response) {
+                response.json().then(function(element) {
+                    const date1 = new Date(element[0].datetime);
+                    const formattedDate1 = `${String(date1.getHours()).padStart(2, '0')}:${String(date1.getMinutes()).padStart(2, '0')}:${String(date1.getSeconds()).padStart(2, '0')}`;
+                    updateChartDOM(element[0].light, element[0].humidity, element[0].temperature, formattedDate1,element[0].device4);
+                    var dem = 0;
+                    for (var i = 1; i < element.length; i = i + 2) {
+                        
+                        if(element[i].light - element[i-1].light > 10 || element[i].temperature - element[i-1].temperature > 5 || element[i].humidity - element[i-1].humidity > 10) {
+                            const date = new Date(element[i-1].datetime);
+                            const formattedDate = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+                            updateChartDOM(element[i-1].light, element[i-1].humidity, element[i-1].temperature, formattedDate,element[i-1].device4);
+
+                            const date0 = new Date(element[i].datetime);
+                            const formattedDate0 = `${String(date0.getHours()).padStart(2, '0')}:${String(date0.getMinutes()).padStart(2, '0')}:${String(date0.getSeconds()).padStart(2, '0')}`;
+                            updateChartDOM(element[i].light, element[i].humidity, element[i].temperature, formattedDate0,element[i].device4);
+                            dem = 0;
+                        }else{
+                            dem = dem + 1;
+                        }
+                        if(dem == 6){
+                            const date0 = new Date(element[i].datetime);
+                            const formattedDate0 = `${String(date0.getHours()).padStart(2, '0')}:${String(date0.getMinutes()).padStart(2, '0')}:${String(date0.getSeconds()).padStart(2, '0')}`;
+                            updateChartDOM(element[i].light, element[i].humidity, element[i].temperature, formattedDate0,element[i].device4);
+                            dem = 0;
+                        } 
+                    }
+                })
+            })
+            .catch(error => {
+                console.error('Có lỗi xảy ra:', error); // Xử lý lỗi nếu có
+            });
+
+            // Hàm sinh số ngẫu nhiên từ 0 đến 1000
+            function getRandomValue() {
+                return Math.floor(Math.random() * 1001);
+            }
+
+            // Ví dụ sử dụng hàm
+            const randomValue = getRandomValue();
+            // Hàm để cập nhật dữ liệu liên tục mỗi 2 giây
+            function updateChartDOM(light, humidity, temperature, time , device4) {
+                labels.shift();
+                labels.push(time);
+                Other_data.shift();
+                Other_data.push(device4);
+                // Cập nhật biểu đồ
+                myLineChart1.update();
+            }
+        });
+        
+    var dem_nhay_led = 0;
+        var dk_true = false;
+        // Kết nối WebSocket đến server
+        const ws1 = new WebSocket('ws://localhost:8080');
+        ws1.onopen = () => {
+            console.log('Kết nối WebSocket thành công ở trang chu');
+        };
+        ws1.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            //console.log('Nhận dữ liệu từ server:', data);
+            if(data.device4 > 60){
+                if(dk_true === false){
+                    dk_true = true;
+                }
+            }
+            if(data.device4 <= 60){
+                if(dk_true === true){
+                    dk_true = false;
+                    dem_nhay_led = dem_nhay_led + 1;
+                    document.getElementById("solancanhbao").textContent = "Số lần cảnh báo : " +  dem_nhay_led;
+                }  
+            }
+              
+
+            checkBeroreUpdateWs(data);
+        };
+
+        ws1.onclose = () => {
+            console.log('WebSocket đã ngắt kết nối ở trang chu');
+        };
+        ws1.onerror = (error) => {
+            console.error('Lỗi WebSocket ở trang chu: ', error);
+        };
+
+        var checkBeroreUpdateWsSTT = 0;
+        var data_cu;
+        function checkBeroreUpdateWs(data){
+            if(checkBeroreUpdateWsSTT == 0){
+                updateChart(data.light,data.humidity,data.temperature,data.datetime,data.device4)
+            }else if(data.light - data_cu.light > 10 || data.temperature - data_cu.temperature > 5 || data.humidity - data_cu.humidity > 10){
+                    updateChart(data_cu.light,data_cu.humidity,data_cu.temperature,data_cu.datetime,data_cu.device4)
+                    updateChart(data.light,data.humidity,data.temperature,data.datetime,data.device4)
+                    checkBeroreUpdateWsSTT = 1;
+            }else if(checkBeroreUpdateWsSTT == 15 ){
+                updateChart(data.light,data.humidity,data.temperature,data.datetime,data.device4);
+                checkBeroreUpdateWsSTT = 1;
+            }
+            checkBeroreUpdateWsSTT = checkBeroreUpdateWsSTT + 1;
+            
+            data_cu = data;
+        }
+        // Hàm để cập nhật dữ liệu liên tục mỗi 2 giây
+        function updateChart(light,humidity,temperature,datetime,device4) {
+            // Lấy thời gian hiện tại
+            const date0 = new Date(datetime);
+            const formattedDate0 = `${String(date0.getHours()).padStart(2, '0')}:${String(date0.getMinutes()).padStart(2, '0')}:${String(date0.getSeconds()).padStart(2, '0')}`;
+            
+            labels.shift();
+            labels.push(formattedDate0);
+
+                Other_data.shift();
+                Other_data.push(device4);
+
+            // Cập nhật biểu đồ
+            myLineChart1.update();
+        }
+        let isMayMove = false;
+        let posXsun1 = 100;
+        let posXsun2 = 50;
+        let posXsun3 = 100;
+        function moveMay() {
+            const sun1 = document.getElementById("may1");
+            const sun2 = document.getElementById("may2");
+            const sun3 = document.getElementById("may3");
+            // Kích thước của cửa sổ trình duyệt
+            const windowWidth = window.innerWidth;
+            // Vị trí ban đầu
+            let posYsun1 = 0;
+            let posYsun2 = 50;
+            let posYsun3 = 0;
+            // Tốc độ di chuyển
+            let velocityX1 = 1; // Vận tốc theo chiều X
+            let velocityX2 = 1; // Vận tốc theo chiều X
+            let velocityX3 = 1; // Vận tốc theo chiều X
+            
+            function animate() {
+                if (!isMayMove) return;
+                posXsun1 += velocityX1;
+                posXsun2 += velocityX2;
+                posXsun3 += velocityX3;
+                // Kiểm tra va chạm với các cạnh
+                if (posXsun1 <= -200 || posXsun1 >= windowWidth - 1350) {
+                    velocityX1 = -velocityX1; // Đổi hướng di chuyển theo chiều X
+                }
+                if (posXsun2 <= -80 || posXsun2 >= windowWidth - 1400) {
+                    velocityX2 = -velocityX2; // Đổi hướng di chuyển theo chiều X
+                }
+                if (posXsun3 <= -100 || posXsun3 >= windowWidth - 1150) {
+                    velocityX3 = -velocityX3; // Đổi hướng di chuyển theo chiều X
+                }
+                sun1.style.transform = `translate(${posXsun1}px, ${posYsun1}px)`;
+                sun2.style.transform = `translate(${posXsun2}px, ${posYsun2}px)`;
+                sun3.style.transform = `translate(${posXsun3}px, ${posYsun3}px)`;
+                requestAnimationFrame(animate); // Gọi lại hàm animate cho hiệu ứng liên tục
+            }
+            animate(); // Bắt đầu hoạt động
+        }
+        var moveTuyetTrueOrFalse = false;
+        function moveTuyet() {
+            const tuyet1 = document.getElementById("tuyet1");
+            const tuyet2 = document.getElementById("tuyet2");
+            const tuyet3 = document.getElementById("tuyet3");
+            const tuyet4 = document.getElementById("tuyet4");
+            const tuyet5 = document.getElementById("tuyet5");
+
+            // Kích thước của cửa sổ trình duyệt
+            const windowHeight = window.innerHeight;
+            // Vị trí ban đầu
+            let posXtuyet1 = 0;
+            let posYtuyet1 = 0;
+            let posXtuyet2 = 0;
+            let posYtuyet2 = 0;
+            let posXtuyet3 = 0;
+            let posYtuyet3 = 0;
+            let velocitytuyetY1 = 0.5; // Vận tốc theo chiều Y
+            let velocitytuyetY2 = 0.5; // Vận tốc theo chiều Y
+            let velocitytuyetY3 = 0.5; // Vận tốc theo chiều Y
+
+            function animate1() {
+                if (!moveTuyetTrueOrFalse) return;
+                posYtuyet1 += velocitytuyetY1;
+                posYtuyet2 += velocitytuyetY2;
+                posYtuyet3 += velocitytuyetY3;
+                if (posYtuyet1 <= -40 || posYtuyet1 >= windowHeight - 600 ) {
+                    //velocitytuyetY1 = -velocitytuyetY1; // Đổi hướng di chuyển theo chiều Y
+                    posYtuyet1 = -40;
+                }
+                if (posYtuyet2 <= -80 || posYtuyet2 >= windowHeight -530 ) {
+                    //velocitytuyetY2 = -velocitytuyetY2; // Đổi hướng di chuyển theo chiều Y
+                    posYtuyet2 = -80;
+                }
+                if (posYtuyet3 <= -85 || posYtuyet3 >= windowHeight - 700 ) {
+                    //velocitytuyetY3 = -velocitytuyetY3; // Đổi hướng di chuyển theo chiều Y
+                    posYtuyet3 = -85;
+                }
+                tuyet1.style.transform = `translate(${posXtuyet1}px, ${posYtuyet1}px)`;
+                tuyet2.style.transform = `translate(${posXtuyet2}px, ${posYtuyet2}px)`;
+                tuyet3.style.transform = `translate(${posXtuyet3}px, ${posYtuyet3}px)`;
+
+                requestAnimationFrame(animate1); // Gọi lại hàm animate cho hiệu ứng liên tục
+            }
+            animate1(); // Bắt đầu hoạt động
+        }
+
+        function toggleIcon(checkbox, iconId, animationClass) {
+            var icon = document.getElementById(iconId);
+            const image = document.getElementById('mattroi');
+
+            fetch("http://localhost:3000/trang_chu/mqtt",{
+                method : 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({  action: checkbox.checked.toString(),
+                                        device: "device4"
+                                    })
+            })
+            .then(function(response){
+                response.json().then(function(element) {
+                    console.log(element.device)
+                    console.log(element.status)
+                            if (checkbox.checked) {
+                                icon.style.color = "red";
+                                image.style.filter = "hue-rotate(0deg) saturate(100%)";  // Bỏ hiệu ứng
+                                document.getElementById("ngoinha").src = "/pic/ngoinha.jpg";
+                            } else {
+                                icon.style.color = "gray";
+                                image.style.filter = "hue-rotate(180deg) saturate(200%)";  // Thêm hiệu ứng
+                                document.getElementById("ngoinha").src = "/pic/ngoinha1.jpg";
+                            }
+
+                            if (checkbox.checked) {
+                                // Nếu đang dừng, bắt đầu chạy
+                                isMayMove = true;
+                                moveMay();
+                                var elements = document.getElementsByClassName("may");
+                                for (var i = 0; i < elements.length; i++) {
+                                    elements[i].src = "/pic/may1.jpg";
+                                }
+                            } else {
+                                // Nếu đang chạy, dừng lại
+                                isMayMove = false;
+                                var elements = document.getElementsByClassName("may");
+                                for (var i = 0; i < elements.length; i++) {
+                                    elements[i].src = "/pic/may.jpg";
+                                }
+                            }
+
+                            if (checkbox.checked) {
+                                // Nếu đang dừng, bắt đầu chạy
+                                moveTuyetTrueOrFalse = true;
+                                moveTuyet();
+                                document.getElementById("nguoituyet").src = "/pic/nguoituyet1.jpg";
+                            } else {
+                                // Nếu đang chạy, dừng lại
+                                moveTuyetTrueOrFalse = false;
+                                document.getElementById("nguoituyet").src = "/pic/nguoituyet.jpg";
+                            }
+                })
+            })
+            .catch(error => {
+                console.error('Có lỗi xảy ra:', error); // Xử lý lỗi nếu có
+            });
+        }
+        
+    </script>
+    <style>
+        /* Quạt quay */
+        .spin {
+            animation: spin 2s linear infinite;
+            transform-origin: 70% 50%; 
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(-360deg); }
+        }
+
+        /* Gió thổi */
+        .blow {
+            animation: blow 1s ease-in-out infinite alternate;
+        }
+
+        @keyframes blow {
+            0% { transform: translateX(-5px); }
+            100% { transform: translateX(10px); }
+        }
+
+       
+    </style>
+</body>
+</html>

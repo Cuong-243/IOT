@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/Css/lich_su.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+<body>
+    {{>header}}
+    <div>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Tìm kiếm thiết bị...">
+            <button type="button" class="search-button">
+                <i id= "search_button" class="fas fa-search"></i>
+            </button>
+        </div>
+       
+        <table id="deviceTable">
+            <colgroup>
+                <col style="width: 20%;">
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+                <col style="width: 30%;">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>
+                        Thiết bị
+                        <i class="fas fa-filter filter-icon" onclick="toggleDropdown('deviceDropdown')"></i>
+                        <div id="deviceDropdown" class="dropdown-content">
+                            <label><input type="checkbox" value="Điều hòa" onclick="filterTable1()"> Điều hòa</label><br>
+                            <label><input type="checkbox" value="Quạt" onclick="filterTable1()"> Quạt</label><br>
+                            <label><input type="checkbox" value="Đèn" onclick="filterTable1()"> Đèn</label>
+                        </div>
+                    </th>
+                    <th>
+                        Hành động
+                        <i class="fas fa-filter filter-icon" onclick="toggleDropdown('actionDropdown')"></i>
+                        <div id="actionDropdown" class="dropdown-content">
+                            <label><input type="checkbox" value="Bật" onclick="filterTable1()"> Bật</label><br>
+                            <label><input type="checkbox" value="Tắt" onclick="filterTable1()"> Tắt</label>
+                        </div>
+                    </th>
+                    <th>
+                        Thời gian
+                        <br>
+                        <input type="date" id="timeFilter" onchange="filterTable()">
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="deviceTableBody">
+                <tr id="noResultsRow" style="display: none;">
+                    <td colspan="4">Không có dữ liệu phù hợp.</td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="phan_trang">
+            <button id="prev_button">Trang trước</button>
+            <span id="current_page">Trang hiện tại : </span>
+
+            <button id="next_button">Trang sau</button>
+        </div>
+    </div>
+    <script>
+        var current_page = 1;
+        function renumberTable() {
+            const table = document.getElementById("deviceTable");
+            const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+            for (let i = 0; i < rows.length - 1; i++) {
+                if(rows[i].style.display == ""){
+                    rows[i].cells[0].textContent = (current_page - 1) * 10 + i + 1; // Đặt lại giá trị số thứ tự
+                }
+            }
+        }
+
+
+        function toggleDropdown(dropdownId) {
+            const dropdown = document.getElementById(dropdownId);
+            dropdown.classList.toggle("show");
+        }
+
+        // Lắng nghe sự kiện nhấn phím "Enter" trong ô nhập liệu
+        document.getElementById("searchInput").addEventListener('keydown', function(event) {
+            if (event.key === "Enter") {
+                document.getElementById("search_button").click();
+            }
+        });
+        
+        document.getElementById("search_button").addEventListener('click', function() {
+            const selectedValues = [];
+            // Lấy tất cả các checkbox
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            // Duyệt qua các checkbox và thêm các giá trị đã chọn vào mảng
+            checkboxes.forEach(function(checkbox) {
+                if (checkbox.checked) {
+                    selectedValues.push(checkbox.value);
+                }
+            });
+
+            fetchData(current_page,selectedValues)
+            document.getElementById("noResultsRow").style.display = true ? 'none' : '';
+            renumberTable()
+        });
+
+        var selectedValues_new = [];
+        function filterTable1() {
+            const selectedValues = [];
+            // Lấy tất cả các checkbox
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            // Duyệt qua các checkbox và thêm các giá trị đã chọn vào mảng
+            checkboxes.forEach(function(checkbox) {
+                if (checkbox.checked) {
+                    selectedValues.push(checkbox.value);
+                }
+            });
+            // In mảng các giá trị đã chọn ra console
+            console.log(selectedValues);
+            selectedValues_new = selectedValues;
+            
+            fetchData(current_page,selectedValues)
+            var hasResults = true;
+            document.getElementById("noResultsRow").style.display = hasResults ? 'none' : '';
+            renumberTable()
+        }
+
+        function filterTable() {//không dùng hàm này nữa
+            const deviceFilters = Array.from(document.querySelectorAll('#deviceDropdown input[type="checkbox"]:checked')).map(el => el.value.toLowerCase());
+            const actionFilters = Array.from(document.querySelectorAll('#actionDropdown input[type="checkbox"]:checked')).map(el => el.value.toLowerCase());
+            var timeFilter = document.getElementById('timeFilter').value;
+            const table = document.getElementById("deviceTableBody");
+            const rows = table.getElementsByTagName("tr");
+            var input = document.getElementById("searchInput");
+            var filter = input.value.toLowerCase();
+            var hasResults = false;
+            for (let i = 0; i < rows.length-1; i++) {
+                const cells = rows[i].getElementsByTagName("td");
+                const deviceCell = cells[1];
+                const actionCell = cells[2];
+
+                const issearchDevice = filter == "" || cells[1].innerText.toLowerCase().indexOf(filter)  > -1;
+                const isDeviceMatch = deviceFilters.length === 0 || deviceFilters.includes(deviceCell.innerText.toLowerCase());
+                const isActionMatch = actionFilters.length === 0 || actionFilters.includes(actionCell.innerText.toLowerCase());
+                const isTimeMatch = timeFilter == "" || cells[3].innerText.startsWith(timeFilter);
+
+                if (issearchDevice && isDeviceMatch && isActionMatch && isTimeMatch) {
+                    rows[i].style.display = "";
+                    hasResults = true;
+                } else {
+                    rows[i].style.display = "none";
+                }
+            }
+            document.getElementById("noResultsRow").style.display = hasResults ? 'none' : '';
+            renumberTable()
+        }
+
+        function addDataRow(element) {
+            const table = document.getElementById('deviceTable').getElementsByTagName('tbody')[0];
+            const newRow = table.insertRow(0);
+            var rows = table.rows;
+            const cell1 = newRow.insertCell(0);
+            const cell2 = newRow.insertCell(1);
+            const cell3 = newRow.insertCell(2);
+            const cell4 = newRow.insertCell(3);
+
+            cell1.innerText = rows.length - 1;
+            if(element.device == "light"){
+                cell2.innerText = "Đèn";
+            }else if(element.device == "fan"){
+                cell2.innerText = "Quạt";
+            }else{
+                cell2.innerText = "Điều hòa";
+            }
+            if(element.action == "true"){
+                cell3.innerText = "Bật";
+            }else{
+                cell3.innerText = "Tắt";
+            }
+            const date = new Date(element.datetime);
+            const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+            cell4.innerText = formattedDate;
+            renumberTable()
+        }
+        // Hàm để lấy dữ liệu từ server
+        function fetchData(page,array) {
+            document.getElementById("current_page").innerText = "Trang hiện tại : " + page;
+            document.getElementById("deviceTable").getElementsByTagName("tbody")[0].innerHTML = `<tr id="noResultsRow" style="display: none;">
+                                                                                                    <td colspan="4">Không có dữ liệu phù hợp.</td>
+                                                                                                </tr>`;  // Xóa dữ liệu cũ
+            
+            fetch("http://localhost:3000/lichsu/getdata",{
+                method : 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({  data1 : page,
+                                        data2 : array ,
+                                        data3 : document.getElementById("searchInput").value})
+            })
+            .then(function(response){
+                response.json().then(function(element) {
+                    for(var i =0;i < element.length; i++){
+                        addDataRow(element[i])
+                    }
+                    if (element.length < 10) {
+                        document.getElementById('next_button').disabled = true; // Vô hiệu hóa nút Trang trước
+                    } else {
+                        document.getElementById('next_button').disabled = false; // Kích hoạt lại nút Trang trước nếu trang lớn hơn 1
+                    }
+                })
+            })
+            .catch(error => {
+                console.error('Có lỗi xảy ra:', error); // Xử lý lỗi nếu có
+            });
+            if (page <= 1) {
+                document.getElementById('prev_button').disabled = true; // Vô hiệu hóa nút Trang trước
+            } else {
+                document.getElementById('prev_button').disabled = false; // Kích hoạt lại nút Trang trước nếu trang lớn hơn 1
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            fetchData(current_page,['Điều hòa', 'Quạt', 'Đèn', 'Bật', 'Tắt'])
+        });
+        document.getElementById("prev_button").addEventListener("click",function(){
+            current_page = current_page - 1;
+            fetchData(current_page,selectedValues_new)
+        })
+        document.getElementById("next_button").addEventListener("click",function(){
+            current_page = current_page + 1;
+            fetchData(current_page,selectedValues_new)
+        })
+    </script>
+    <style>
+        /* Căn giữa search container */
+        .search-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0; /* Khoảng cách trên dưới của thanh tìm kiếm */
+        }
+
+        /* Styling cho ô input */
+        #searchInput {
+            width: 400px; /* Chiều rộng của ô tìm kiếm */
+            padding: 10px 20px; /* Padding bên trong ô tìm kiếm */
+            border: 2px solid #ccc; /* Viền của ô tìm kiếm */
+            border-radius: 20px 0 0 20px; /* Bo góc trái của ô tìm kiếm */
+            outline: none;
+            font-size: 16px; /* Kích thước chữ */
+        }
+
+        /* Styling cho nút search */
+        .search-button {
+            background-color: #f8f8f8; /* Màu nền của nút */
+            border: 2px solid #ccc; /* Viền của nút */
+            border-left: none; /* Loại bỏ viền trái để ghép với ô tìm kiếm */
+            border-radius: 0 20px 20px 0; /* Bo góc phải của nút */
+            padding: 8px 20px; /* Padding bên trong nút */
+            cursor: pointer;
+        }
+
+        .search-button i {
+            font-size: 18px; /* Kích thước icon tìm kiếm */
+            color: #333; /* Màu của icon */
+        }
+
+        /* Tạo hiệu ứng hover cho nút search */
+        .search-button:hover {
+            background-color: #1171de; /* Thay đổi màu nền khi hover */
+        }
+        /* Định dạng cho tiêu đề cột và icon bộ lọc */
+        th {
+            position: relative;
+            padding: 8px;
+            background-color: #f4f4f4;
+        }
+        
+        /* Định dạng cho icon bộ lọc */
+        .filter-icon {
+            cursor: pointer;
+            margin-left: 8px;
+            font-size: 1.2em;
+            vertical-align: middle;
+        }
+        
+        /* Định dạng cho hộp dropdown */
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            width: 100px;
+        }
+        .dropdown-content label{
+            font-size: 15px;
+        }
+        #deviceDropdown,#actionDropdown{
+            margin-left: 250px;
+        }
+        #timeFilter{
+            width: 200px;
+            border: 2px solid #ccc; /* Viền của ô tìm kiếm */
+            border-radius: 20px; /* Bo góc trái của ô tìm kiếm */
+            outline: none;
+            font-size: 16px; /* Kích thước chữ */
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+        /* Định dạng cho các phần tử trong dropdown */
+        .dropdown-content label {
+            display: block;
+            padding: 5px;
+        }
+        
+        /* Hiển thị dropdown khi nhấp vào icon */
+        .show {
+            display: block;
+        }
+        
+        /* Định dạng cho input datetime-local */
+        .dropdown-content input[type="datetime-local"] {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</body>
+</html>
